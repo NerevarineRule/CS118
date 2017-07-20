@@ -1,0 +1,79 @@
+CS118 Project 1
+
+I. Design / Implementation Description:
+
+0) Using Threads to realize proxy connection
+We used threads to represent connections. each thread represents the connection between client and the proxy and 
+will use the function http_connection to receive request and retrieve response from the server and then send the response back to the client
+each thread has a mutex field that allows it to perform an atomic operation on certain tasks, such as storing a newly obtained response to the
+globally shared cache. each thread will also hold the server port number (represented in char*) and the client id obtained using accept().
+
+1) Caching
+We have used a map of <string,string> as our cache. This cache maps the full path of the requested file to the entire HTTP response message.
+In the main function, each newly generated thread has a field of type map<string,string> that will point to the global cache variable.
+Therefore, there is one global cache that is shared by all the running threads. Whenever a thread stores a path/response pair to the 
+cache, the thread employs blocking mutex, such that no other thread can interrupt current thread's interaction with the cache, thus allowing
+atomicity of cache storage.
+
+2) Reading in request / response
+For reading in request, We just used a while loop and recv function. We constanly read in bytes from the client / server and store them in a
+string. For request reading process, we terminate our while loop if our string contains "\r\n\r\n", which means that we have read in the entire
+request, including the last terminating carriage and line separator.
+For reading in response, the process is more complex. For reasons unknown, our recv function always blocks right after the last byte of the response
+is read and appended to the response string. For this reason, we had to use select() to time out. our response read function, getResponse2(), takes in
+the server socket file descriptor as an input. Since this descriptor is used to read in bytes from the server via recv() call, we add this socket file
+descriptor to the read file descriptor set using FD_SET. In addition, we also specify the timeout value using the struct timeval.
+Then, we would input the read file descriptor set into select() call and examine its return value. If its return value is 0, that means select call
+has timed out. Therefore, we terminate our getResponse2 function after this instance. By the time getResponse2 terminates, the entire response is
+read in, since our code passes all the given test scripts, including conditional GET tester.
+
+3) Proxy timeout
+Proxy timeout also uses select() to timeout. we have set up timeout value as 20 second. after 20 seconds of inactivity, proxy will timeout and terminate
+
+4) Concurrent connection
+We have failed to implement a reliable concurrent connection. Therefore, we have commented out this portion of the test script.
+
+5) Client-side persistent connection
+In order to implement persistent connection, we examine the "Connection" header of the incoming request and check whether the field is specified
+as "close". If the field is specified as "close", we close the client file descriptor after the response is sent to the client. If the field is not
+"close", we simply do not close the client file descriptor. The test script tests persistent connection by requesting the cached response (which was
+cached in the previous testing of basic object fetching). Then, the test script uses the same client-side connection to request another object.
+In order to pass this portion of the test, we reinvoked the thread function http-connection() again so that the proxy can receive request from and send back
+response to the client on the same client side connection.  
+
+6) Proxy-to-server persistent connection
+In order to implement this feature, we used select() again in case when the request has not been cached yet, and the proxy has to establish a new connection
+to the server to obtain a response. After the response is obtained and the response is sent back to the client, the proxy uses select to wait for 3 seconds,
+so that subsequent interaction between the proxy and the server can use the same connection. After 3 seconds, select() times out and server socket file 
+descriptor is closed. 
+
+II. Limitations
+
+1)Our code successfully passes http-tester.py idempotently.
+2)However, http-tester-conditionalGET-LAtime.py only passes once and after that it fails since the response has been cached already and expiration date
+stays the same as the first attempt. But if restart proxy and test http-tester-conditionalGET-LAtime.py, it passes again.
+3)testing http-tester.py then testing http-tester-conditionalGET-LAtime.py fails
+4)testing two scripts separately works fine.
+ 
+
+III. EXTRA implementations
+
+Our code polls if there are over 20 simultaneous connections between the proxy and the client 
+We incremented thread count atomically using mutex at the beginning of http-connection() function
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
