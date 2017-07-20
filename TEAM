@@ -1,0 +1,19 @@
+TEAM Members
+
+Name: Sangyeop Lee
+UID: 003-950-078
+Name: Dennis Shen
+UID: 004-002-509
+
+Individual contributions
+
+Sangyeop Lee:
+1)Implemented getResponse2() and incorporated select() into main function to make proxy timeout. 
+2)Implemented conditionalGET part of the proxy as well as isExpired() function to check whether the file has expired or not
+
+Dennis Shen:
+1)Implemented caching and mainly responsible for socket programming. implemented serverListen(),connectToServer(),socketAccept()
+2)incorporated mutex into thread structure
+3)Implemented request fetching and formatting request, general mechanics of connecting to the server within http-connection()
+
+
